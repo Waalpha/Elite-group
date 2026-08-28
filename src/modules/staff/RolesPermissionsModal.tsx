@@ -96,8 +96,15 @@ export const RolesPermissionsModal: React.FC<RolesPermissionsModalProps> = ({ is
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [userSearch, setUserSearch] = useState('');
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [isResetPassModalOpen, setIsResetPassModalOpen] = useState(false);
+  const [selectedUserForReset, setSelectedUserForReset] = useState<UserProfile | null>(null);
+  const [newPasswordValue, setNewPasswordValue] = useState('');
+  const [showPasswordsMap, setShowPasswordsMap] = useState<Record<string, boolean>>({});
+
   const [newUserForm, setNewUserForm] = useState({
     displayName: '',
+    username: '',
+    password: '',
     email: '',
     phoneNumber: '+254 7',
     role: 'TEACHER' as UserRole,
@@ -186,20 +193,59 @@ export const RolesPermissionsModal: React.FC<RolesPermissionsModalProps> = ({ is
     }
   };
 
+  const handleOpenResetPassword = (user: UserProfile) => {
+    setSelectedUserForReset(user);
+    setNewPasswordValue('Uwezo@2025');
+    setIsResetPassModalOpen(true);
+  };
+
+  const handleConfirmResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserForReset || !newPasswordValue.trim()) return;
+    try {
+      await updateUser(selectedUserForReset.id, {
+        password: newPasswordValue.trim(),
+        updatedAt: new Date().toISOString(),
+      });
+      alert(`Password for @${selectedUserForReset.username || selectedUserForReset.displayName} successfully updated to: ${newPasswordValue.trim()}`);
+      setIsResetPassModalOpen(false);
+      setSelectedUserForReset(null);
+    } catch (err: any) {
+      alert(`Failed to update password: ${err.message}`);
+    }
+  };
+
+  const toggleShowPassword = (userId: string) => {
+    setShowPasswordsMap((prev) => ({
+      ...prev,
+      [userId]: !prev[userId],
+    }));
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUserForm.displayName || !newUserForm.email) {
       alert('Please fill in user name and email.');
       return;
     }
+
+    const defaultUsername = newUserForm.username.trim() || newUserForm.displayName.toLowerCase().replace(/\s+/g, '.');
+    const defaultPassword = newUserForm.password.trim() || 'Admin@123';
+
     try {
       await addUser({
         ...newUserForm,
+        username: defaultUsername,
+        password: defaultPassword,
+        createdBy: currentUser?.id || 'super-admin',
         createdAt: new Date().toISOString(),
       });
+      alert(`User account created successfully!\nUsername: ${defaultUsername}\nPassword: ${defaultPassword}`);
       setIsAddUserModalOpen(false);
       setNewUserForm({
         displayName: '',
+        username: '',
+        password: '',
         email: '',
         phoneNumber: '+254 7',
         role: 'TEACHER',
@@ -421,80 +467,120 @@ export const RolesPermissionsModal: React.FC<RolesPermissionsModalProps> = ({ is
                   <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 sticky top-0 z-10">
                     <tr>
                       <th className="px-4 py-3">User & Contact</th>
+                      <th className="px-4 py-3">Login Username</th>
+                      <th className="px-4 py-3">Password Credentials</th>
                       <th className="px-4 py-3">Assigned Role</th>
                       <th className="px-4 py-3">Account Status</th>
                       <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredUsers.map((user) => (
-                      <tr key={user.id} className="hover:bg-slate-50/70 transition">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs shrink-0">
-                              {(user.displayName || 'U')[0].toUpperCase()}
+                    {filteredUsers.map((user) => {
+                      const isShowingPass = showPasswordsMap[user.id] || false;
+                      const userPass = user.password || 'Admin@123';
+                      const userUname = user.username || user.displayName.toLowerCase().replace(/\s+/g, '.');
+
+                      return (
+                        <tr key={user.id} className="hover:bg-slate-50/70 transition">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs shrink-0">
+                                {(user.displayName || 'U')[0].toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-bold text-slate-900 truncate">{user.displayName || 'Unnamed User'}</p>
+                                <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
+                                {user.phoneNumber && (
+                                  <p className="text-[10px] text-slate-400">{user.phoneNumber}</p>
+                                )}
+                              </div>
                             </div>
-                            <div className="min-w-0">
-                              <p className="font-bold text-slate-900 truncate">{user.displayName || 'Unnamed User'}</p>
-                              <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
-                              {user.phoneNumber && (
-                                <p className="text-[10px] text-slate-400">{user.phoneNumber}</p>
-                              )}
+                          </td>
+
+                          {/* Login Username */}
+                          <td className="px-4 py-3">
+                            <span className="font-mono text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200/80">
+                              @{userUname}
+                            </span>
+                          </td>
+
+                          {/* Password Credentials */}
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1.5 font-mono text-xs">
+                              <span className="text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md font-semibold">
+                                {isShowingPass ? userPass : '••••••••'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => toggleShowPassword(user.id)}
+                                className="p-1 text-slate-400 hover:text-slate-700 rounded-md transition cursor-pointer"
+                                title={isShowingPass ? 'Hide password' : 'Show password'}
+                              >
+                                {isShowingPass ? '👁️' : '🔒'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenResetPassword(user)}
+                                className="px-2 py-0.5 text-[10px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-md transition cursor-pointer"
+                                title="Reset user password"
+                              >
+                                Reset
+                              </button>
                             </div>
-                          </div>
-                        </td>
+                          </td>
 
-                        <td className="px-4 py-3">
-                          <select
-                            value={user.role}
-                            onChange={(e) => handleUserRoleChange(user.id, e.target.value as UserRole)}
-                            className="px-2 py-1 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
-                          >
-                            {rolePermissions.map((rp) => (
-                              <option key={rp.role} value={rp.role}>
-                                {rp.roleTitle || rp.role.replace('_', ' ')}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
+                          <td className="px-4 py-3">
+                            <select
+                              value={user.role}
+                              onChange={(e) => handleUserRoleChange(user.id, e.target.value as UserRole)}
+                              className="px-2 py-1 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
+                            >
+                              {rolePermissions.map((rp) => (
+                                <option key={rp.role} value={rp.role}>
+                                  {rp.roleTitle || rp.role.replace('_', ' ')}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
 
-                        <td className="px-4 py-3">
-                          <select
-                            value={user.status || 'active'}
-                            onChange={(e) =>
-                              handleUserStatusChange(
-                                user.id,
-                                e.target.value as 'active' | 'suspended' | 'inactive'
-                              )
-                            }
-                            className={`px-2 py-1 text-xs font-bold rounded-lg border focus:outline-hidden ${
-                              user.status === 'suspended'
-                                ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                : user.status === 'inactive'
-                                ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            }`}
-                          >
-                            <option value="active">Active (Full Access)</option>
-                            <option value="suspended">Suspended (Access Blocked)</option>
-                            <option value="inactive">Inactive</option>
-                          </select>
-                        </td>
+                          <td className="px-4 py-3">
+                            <select
+                              value={user.status || 'active'}
+                              onChange={(e) =>
+                                handleUserStatusChange(
+                                  user.id,
+                                  e.target.value as 'active' | 'suspended' | 'inactive'
+                                )
+                              }
+                              className={`px-2 py-1 text-xs font-bold rounded-lg border focus:outline-hidden ${
+                                user.status === 'suspended'
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                  : user.status === 'inactive'
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              }`}
+                            >
+                              <option value="active">Active (Full Access)</option>
+                              <option value="suspended">Suspended (Access Blocked)</option>
+                              <option value="inactive">Inactive</option>
+                            </select>
+                          </td>
 
-                        <td className="px-4 py-3 text-right">
-                          <button
-                            onClick={() => handleDeleteUser(user.id, user.displayName)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer"
-                            title="Delete Account"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          <td className="px-4 py-3 text-right">
+                            <button
+                              onClick={() => handleDeleteUser(user.id, user.displayName)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer"
+                              title="Delete Account"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                     {filteredUsers.length === 0 && (
                       <tr>
-                        <td colSpan={4} className="px-4 py-8 text-center text-slate-400">
+                        <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
                           No users found matching search.
                         </td>
                       </tr>
@@ -506,13 +592,62 @@ export const RolesPermissionsModal: React.FC<RolesPermissionsModalProps> = ({ is
           </div>
         )}
 
+        {/* Reset Password Modal */}
+        {isResetPassModalOpen && selectedUserForReset && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl border border-slate-200 space-y-4">
+              <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                <Key className="w-4 h-4 text-amber-600" />
+                Reset Password for {selectedUserForReset.displayName}
+              </h3>
+              <p className="text-xs text-slate-500">
+                Super Admin: assign a new login password for username{' '}
+                <strong className="text-slate-900 font-mono">@{selectedUserForReset.username || selectedUserForReset.displayName}</strong>.
+              </p>
+
+              <form onSubmit={handleConfirmResetPassword} className="space-y-3 text-xs">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">New Password *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Uwezo@2025"
+                    value={newPasswordValue}
+                    onChange={(e) => setNewPasswordValue(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-500 font-mono text-sm font-semibold"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsResetPassModalOpen(false);
+                      setSelectedUserForReset(null);
+                    }}
+                    className="px-3.5 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl transition shadow-xs cursor-pointer"
+                  >
+                    Update Password
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* Add User Modal */}
         {isAddUserModalOpen && (
           <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl border border-slate-200 space-y-4">
               <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
                 <Plus className="w-4 h-4 text-emerald-600" />
-                Add New System User Account
+                Add New System User Account & Credentials
               </h3>
 
               <form onSubmit={handleCreateUser} className="space-y-3 text-xs">
@@ -523,9 +658,41 @@ export const RolesPermissionsModal: React.FC<RolesPermissionsModalProps> = ({ is
                     required
                     placeholder="e.g. Tr. Beatrice Wanjiku"
                     value={newUserForm.displayName}
-                    onChange={(e) => setNewUserForm({ ...newUserForm, displayName: e.target.value })}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      const suggestedUname = name.toLowerCase().trim().replace(/\s+/g, '.');
+                      setNewUserForm({
+                        ...newUserForm,
+                        displayName: name,
+                        username: newUserForm.username ? newUserForm.username : suggestedUname,
+                      });
+                    }}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Login Username *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. teacher.wanjiku"
+                      value={newUserForm.username}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, username: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-500 font-mono text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Login Password *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Pass@123"
+                      value={newUserForm.password}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-500 font-mono text-xs"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -598,7 +765,7 @@ export const RolesPermissionsModal: React.FC<RolesPermissionsModalProps> = ({ is
                     type="submit"
                     className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition shadow-xs"
                   >
-                    Create User
+                    Create User & Credentials
                   </button>
                 </div>
               </form>

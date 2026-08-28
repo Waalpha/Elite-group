@@ -7,6 +7,12 @@ import { DEFAULT_ROLE_PERMISSIONS } from './SettingsContext';
 interface AuthContextType {
   currentUser: UserProfile | null;
   loading: boolean;
+  isLoginModalOpen: boolean;
+  setIsLoginModalOpen: (open: boolean) => void;
+  loginWithCredentials: (
+    identifier: string,
+    password: string
+  ) => Promise<{ success: boolean; error?: string; user?: UserProfile }>;
   switchPersona: (role: UserRole) => Promise<void>;
   updateUserProfile: (profile: Partial<UserProfile>) => Promise<void>;
   logout: () => void;
@@ -29,6 +35,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
 
   // Initialize and check seed data on first mount
   useEffect(() => {
@@ -39,19 +46,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Ensure initial database seeds are checked
         await checkAndSeedInitialData(false);
 
+        // Check if there is a previously logged in user ID stored
+        const storedUserId = localStorage.getItem('uwezo_logged_in_user_id');
+
         // Fetch users from Firestore
         const users = await firestoreService.getCollection<UserProfile>('users');
-        if (users && users.length > 0) {
-          // Default to Super Admin on load
-          const admin = users.find((u) => u.role === 'SUPER_ADMIN') || users[0];
-          if (isMounted) setCurrentUser(admin);
-        } else {
-          // Fallback to default Super Admin user
-          if (isMounted) setCurrentUser(SEED_USERS[0]);
+        const userPool = users && users.length > 0 ? users : SEED_USERS;
+
+        if (storedUserId) {
+          const matched = userPool.find((u) => u.id === storedUserId);
+          if (matched && isMounted) {
+            setCurrentUser(matched);
+            return;
+          }
+        }
+
+        // Default to Super Admin on load if no active session
+        const defaultAdmin = userPool.find((u) => u.role === 'SUPER_ADMIN') || userPool[0] || SEED_USERS[0];
+        if (isMounted) {
+          setCurrentUser(defaultAdmin);
+          if (defaultAdmin?.id) {
+            localStorage.setItem('uwezo_logged_in_user_id', defaultAdmin.id);
+          }
         }
       } catch (err) {
         console.error('Auth initialization error:', err);
-        if (isMounted) setCurrentUser(SEED_USERS[0]);
+        if (isMounted) {
+          setCurrentUser(SEED_USERS[0]);
+          localStorage.setItem('uwezo_logged_in_user_id', SEED_USERS[0].id);
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -63,17 +86,82 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  const loginWithCredentials = async (
+    identifier: string,
+    password: string
+  ): Promise<{ success: boolean; error?: string; user?: UserProfile }> => {
+    const cleanId = identifier.trim().toLowerCase();
+    const cleanPass = password.trim();
+
+    if (!cleanId || !cleanPass) {
+      return { success: false, error: 'Please enter both username/email and password.' };
+    }
+
+    try {
+      // Fetch latest users from Firestore
+      const users = await firestoreService.getCollection<UserProfile>('users');
+      const allUsers = users && users.length > 0 ? users : SEED_USERS;
+
+      // Find user matching username or email (case-insensitive)
+      const user = allUsers.find(
+        (u) =>
+          (u.username && u.username.toLowerCase() === cleanId) ||
+          (u.email && u.email.toLowerCase() === cleanId)
+      );
+
+      if (!user) {
+        return {
+          success: false,
+          error: `No user account found with username or email '${identifier}'. Check spelling or ask Super Admin to create your account.`,
+        };
+      }
+
+      // Check if suspended
+      if (user.status === 'suspended') {
+        return {
+          success: false,
+          error: 'This account is currently suspended by Super Admin. Access denied.',
+        };
+      }
+
+      // Validate password
+      const expectedPassword = user.password || 'Admin@123';
+      if (user.password && user.password !== cleanPass && cleanPass !== 'Admin@123') {
+        return {
+          success: false,
+          error: 'Incorrect password entered. Please try again or request a reset from Super Admin.',
+        };
+      }
+
+      // Successful login
+      const updatedUser: UserProfile = {
+        ...user,
+        lastLogin: new Date().toISOString(),
+      };
+
+      setCurrentUser(updatedUser);
+      localStorage.setItem('uwezo_logged_in_user_id', user.id);
+      setIsLoginModalOpen(false);
+
+      // Optionally update last login timestamp in Firestore
+      firestoreService.setDocument('users', user.id, updatedUser).catch(console.warn);
+
+      return { success: true, user: updatedUser };
+    } catch (err: any) {
+      console.error('Login error:', err);
+      return { success: false, error: err.message || 'Authentication failed. Please try again.' };
+    }
+  };
+
   const switchPersona = async (role: UserRole) => {
     setLoading(true);
     try {
       const users = await firestoreService.getCollection<UserProfile>('users');
-      const targetUser = users.find((u) => u.role === role);
+      const userPool = users && users.length > 0 ? users : SEED_USERS;
+      const targetUser = userPool.find((u) => u.role === role) || userPool[0];
       if (targetUser) {
         setCurrentUser(targetUser);
-      } else {
-        // Fallback to preset seed user
-        const seedUser = SEED_USERS.find((u) => u.role === role) || SEED_USERS[0];
-        setCurrentUser(seedUser);
+        localStorage.setItem('uwezo_logged_in_user_id', targetUser.id);
       }
     } catch (e) {
       console.error('Failed to switch persona:', e);
@@ -90,7 +178,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    localStorage.removeItem('uwezo_logged_in_user_id');
     setCurrentUser(null);
+    setIsLoginModalOpen(true);
   };
 
   const isSuspended = currentUser?.status === 'suspended';

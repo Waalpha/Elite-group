@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   School,
   GraduationCap,
@@ -12,6 +12,7 @@ import {
   Calendar,
   CheckCircle2,
   ChevronRight,
+  ChevronLeft,
   ArrowRight,
   Star,
   Clock,
@@ -39,10 +40,10 @@ interface PublicWebsiteProps {
 
 export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
   onNavigateToPortal,
-  onOpenCMS,
 }) => {
   const { settings, websiteSettings } = useSchoolSettings();
   const [activeSection, setActiveSection] = useState('home');
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [inquirySent, setInquirySent] = useState(false);
   const [inquiryForm, setInquiryForm] = useState({
     studentName: '',
@@ -53,6 +54,68 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
     previousSchool: '',
     notes: '',
   });
+
+  const heroSlides = [
+    {
+      id: 'slide-1',
+      tag: websiteSettings?.tagline || 'Premier CBC & Junior Secondary Excellence',
+      headline: websiteSettings?.heroHeadline || 'Nurturing Future Leaders with Excellence, Character & Technology',
+      subtitle: websiteSettings?.heroSubtitle ||
+        'A world-class co-educational day and boarding institution in Kenya empowering learners through modern CBC, STEM innovation, and values.',
+      ctaText: websiteSettings?.heroCtaText || 'Enroll / Apply for Admission',
+      ctaLink: '#admissions',
+      secondaryText: 'Explore CBC Curriculum',
+      secondaryLink: '#academics',
+      bgImage:
+        websiteSettings?.heroBackgroundImage ||
+        'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=1600&auto=format&fit=crop&q=80',
+      badgeColor: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300',
+    },
+    {
+      id: 'slide-2',
+      tag: 'Junior Secondary (JSS) & STEM Hub',
+      headline: 'State-of-the-Art Science Labs, Coding & Pre-Technical Workshops',
+      subtitle:
+        'Our Grade 7, 8 & 9 Junior Secondary learners gain hands-on technical skills, robotics, digital literacy, and holistic scientific inquiry with certified TSC master faculty.',
+      ctaText: 'Discover JSS Programs',
+      ctaLink: '#academics',
+      secondaryText: 'View Facilities',
+      secondaryLink: '#facilities',
+      bgImage:
+        'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1600&auto=format&fit=crop&q=80',
+      badgeColor: 'bg-blue-500/20 border-blue-500/40 text-blue-300',
+    },
+    {
+      id: 'slide-3',
+      tag: 'Holistic Talents & Character Development',
+      headline: 'Championing Athletics, Music, Creative Arts & Global Leadership',
+      subtitle:
+        'Beyond top academic performance, our learners excel in swimming, performing arts, drama, chess, debate, and values-rooted leadership development.',
+      ctaText: 'Explore Co-Curriculars',
+      ctaLink: '#facilities',
+      secondaryText: 'Admissions Inquiries',
+      secondaryLink: '#admissions',
+      bgImage:
+        'https://images.unsplash.com/photo-1577896851231-70ef18881754?w=1600&auto=format&fit=crop&q=80',
+      badgeColor: 'bg-amber-500/20 border-amber-500/40 text-amber-300',
+    },
+  ];
+
+  // Auto slide interval
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlideIndex((prev) => (prev + 1) % heroSlides.length);
+    }, 7000);
+    return () => clearInterval(timer);
+  }, [heroSlides.length]);
+
+  const handleNextSlide = () => {
+    setCurrentSlideIndex((prev) => (prev + 1) % heroSlides.length);
+  };
+
+  const handlePrevSlide = () => {
+    setCurrentSlideIndex((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
+  };
 
   const handleApplySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,9 +149,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
     }
   };
 
-  const heroBg =
-    websiteSettings?.heroBackgroundImage ||
-    'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=1600&auto=format&fit=crop&q=80';
+  const currentSlide = heroSlides[currentSlideIndex];
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-emerald-500 selection:text-white pb-20">
@@ -157,17 +218,6 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
 
           {/* Actions & ERP Switcher */}
           <div className="flex items-center gap-2">
-            {onOpenCMS && (
-              <button
-                onClick={onOpenCMS}
-                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-bold transition flex items-center gap-1.5 border border-slate-700 cursor-pointer"
-                title="Edit Website Content in Admin CMS"
-              >
-                <Sliders className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Edit CMS</span>
-              </button>
-            )}
-
             {onNavigateToPortal && (
               <button
                 onClick={() => onNavigateToPortal('dashboard')}
@@ -181,49 +231,81 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
         </div>
       </header>
 
-      {/* Hero Section */}
+      {/* Hero Section with Multi-Slide Carousel */}
       <section
         id="home"
-        className="relative overflow-hidden pt-20 pb-28 sm:pt-28 sm:pb-36 bg-cover bg-center border-b border-slate-800"
+        className="relative overflow-hidden pt-20 pb-28 sm:pt-28 sm:pb-36 bg-cover bg-center border-b border-slate-800 transition-all duration-700"
         style={{
-          backgroundImage: `linear-gradient(to bottom, rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.95)), url(${heroBg})`,
+          backgroundImage: `linear-gradient(to bottom, rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.95)), url(${currentSlide.bgImage})`,
         }}
       >
+        {/* Slide Carousel Arrow Controls */}
+        <button
+          onClick={handlePrevSlide}
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-slate-950/60 hover:bg-slate-900/90 border border-slate-700/80 text-white flex items-center justify-center backdrop-blur-md transition shadow-lg cursor-pointer"
+          title="Previous slide"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+
+        <button
+          onClick={handleNextSlide}
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-slate-950/60 hover:bg-slate-900/90 border border-slate-700/80 text-white flex items-center justify-center backdrop-blur-md transition shadow-lg cursor-pointer"
+          title="Next slide"
+        >
+          <ChevronRight className="w-6 h-6" />
+        </button>
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6 relative z-10">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold uppercase tracking-wider backdrop-blur-xs">
+          <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wider backdrop-blur-xs transition-all ${currentSlide.badgeColor}`}>
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>{websiteSettings?.tagline || 'Premier CBC & Junior Secondary Excellence'}</span>
+            <span>{currentSlide.tag}</span>
           </div>
 
-          <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black font-serif text-white tracking-tight max-w-4xl mx-auto leading-tight">
-            {websiteSettings?.heroHeadline || 'Nurturing Future Leaders with Excellence, Character & Technology'}
+          <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black font-serif text-white tracking-tight max-w-4xl mx-auto leading-tight transition-all duration-500">
+            {currentSlide.headline}
           </h2>
 
-          <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto font-medium leading-relaxed">
-            {websiteSettings?.heroSubtitle ||
-              'A world-class co-educational day and boarding institution in Kenya empowering learners through modern CBC, STEM innovation, and values.'}
+          <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto font-medium leading-relaxed transition-all duration-500">
+            {currentSlide.subtitle}
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
             <a
-              href="#admissions"
-              className="px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-xl shadow-emerald-900/50 transition flex items-center gap-2"
+              href={currentSlide.ctaLink}
+              className="px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-xl shadow-emerald-900/50 transition flex items-center gap-2 cursor-pointer"
             >
-              <span>{websiteSettings?.heroCtaText || 'Enroll / Apply for Admission'}</span>
+              <span>{currentSlide.ctaText}</span>
               <ArrowRight className="w-4 h-4" />
             </a>
 
             <a
-              href="#academics"
-              className="px-6 py-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 font-bold text-sm border border-slate-700 transition flex items-center gap-2 backdrop-blur-xs"
+              href={currentSlide.secondaryLink}
+              className="px-6 py-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 font-bold text-sm border border-slate-700 transition flex items-center gap-2 backdrop-blur-xs cursor-pointer"
             >
               <BookOpen className="w-4 h-4 text-emerald-400" />
-              <span>Explore CBC Curriculum</span>
+              <span>{currentSlide.secondaryText}</span>
             </a>
           </div>
 
+          {/* Slide Indicator Dots */}
+          <div className="flex items-center justify-center gap-2.5 pt-4">
+            {heroSlides.map((s, idx) => (
+              <button
+                key={s.id}
+                onClick={() => setCurrentSlideIndex(idx)}
+                className={`h-2.5 rounded-full transition-all cursor-pointer ${
+                  currentSlideIndex === idx
+                    ? 'w-8 bg-emerald-500'
+                    : 'w-2.5 bg-slate-600 hover:bg-slate-500'
+                }`}
+                title={`Go to slide ${idx + 1}`}
+              />
+            ))}
+          </div>
+
           {/* Stats Badges */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto pt-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto pt-8">
             <div className="bg-slate-950/80 backdrop-blur-md p-4 rounded-2xl border border-slate-800 text-center">
               <p className="text-2xl sm:text-3xl font-black text-emerald-400">950+</p>
               <p className="text-xs text-slate-400 font-semibold uppercase mt-1">Enrolled Learners</p>

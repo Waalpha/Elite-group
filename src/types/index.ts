@@ -15,12 +15,15 @@ export type UserRole =
 export interface UserProfile {
   id: string; // Firebase Auth UID or Firestore doc ID
   email: string;
+  username?: string;
+  password?: string;
   displayName: string;
   role: UserRole;
   phoneNumber?: string;
   avatarUrl?: string;
   associatedId?: string; // Links to Student ID, Teacher Staff ID, or Parent ID
   status: 'active' | 'suspended' | 'inactive';
+  createdBy?: string;
   createdAt?: string;
   lastLogin?: string;
 }

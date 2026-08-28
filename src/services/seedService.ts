@@ -49,6 +49,8 @@ export const INITIAL_SCHOOL_SETTINGS: SchoolSettings = {
 export const SEED_USERS: UserProfile[] = [
   {
     id: 'user-super-admin',
+    username: 'superadmin',
+    password: 'Admin@123',
     email: 'admin@uwezoeliteschool.ac.ke',
     displayName: 'Dr. Josephat Mwangi',
     role: 'SUPER_ADMIN',
@@ -57,6 +59,8 @@ export const SEED_USERS: UserProfile[] = [
   },
   {
     id: 'user-principal',
+    username: 'principal',
+    password: 'Principal@123',
     email: 'principal@uwezoeliteschool.ac.ke',
     displayName: 'Madam Elizabeth Wanjiru',
     role: 'PRINCIPAL',
@@ -65,6 +69,8 @@ export const SEED_USERS: UserProfile[] = [
   },
   {
     id: 'user-accountant',
+    username: 'accountant',
+    password: 'Accounts@123',
     email: 'accounts@uwezoeliteschool.ac.ke',
     displayName: 'Peter Otieno (CPA-K)',
     role: 'ACCOUNTANT',
@@ -73,6 +79,8 @@ export const SEED_USERS: UserProfile[] = [
   },
   {
     id: 'user-teacher-mwale',
+    username: 'teacher.mwale',
+    password: 'Teacher@123',
     email: 'teacher.mwale@uwezoeliteschool.ac.ke',
     displayName: 'Tr. David Mwale',
     role: 'TEACHER',
@@ -82,6 +90,8 @@ export const SEED_USERS: UserProfile[] = [
   },
   {
     id: 'user-parent-kariuki',
+    username: 'parent.kariuki',
+    password: 'Parent@123',
     email: 'parent.kariuki@gmail.com',
     displayName: 'Eng. Francis Kariuki',
     role: 'PARENT',
@@ -91,6 +101,8 @@ export const SEED_USERS: UserProfile[] = [
   },
   {
     id: 'user-student-brian',
+    username: 'student.brian',
+    password: 'Student@123',
     email: 'brian.kariuki@students.uwezo.ac.ke',
     displayName: 'Brian Mwangi Kariuki',
     role: 'STUDENT',
@@ -99,6 +111,8 @@ export const SEED_USERS: UserProfile[] = [
   },
   {
     id: 'user-registrar',
+    username: 'registrar',
+    password: 'Registrar@123',
     email: 'registrar@uwezoeliteschool.ac.ke',
     displayName: 'Agnes Muthoni',
     role: 'REGISTRAR',
@@ -107,6 +121,8 @@ export const SEED_USERS: UserProfile[] = [
   },
   {
     id: 'user-librarian',
+    username: 'librarian',
+    password: 'Library@123',
     email: 'library@uwezoeliteschool.ac.ke',
     displayName: 'Grace Achieng',
     role: 'LIBRARIAN',
@@ -115,6 +131,8 @@ export const SEED_USERS: UserProfile[] = [
   },
   {
     id: 'user-transport',
+    username: 'transport',
+    password: 'Transport@123',
     email: 'transport@uwezoeliteschool.ac.ke',
     displayName: 'Samuel Kiptoo',
     role: 'TRANSPORT_MANAGER',
@@ -123,6 +141,8 @@ export const SEED_USERS: UserProfile[] = [
   },
   {
     id: 'user-store',
+    username: 'storekeeper',
+    password: 'Store@123',
     email: 'store@uwezoeliteschool.ac.ke',
     displayName: 'Morris Mutua',
     role: 'STOREKEEPER',
