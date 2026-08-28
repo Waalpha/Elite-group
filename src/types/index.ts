@@ -833,6 +833,21 @@ export interface WebsiteTestimonial {
   date?: string;
 }
 
+export interface WebsiteHeroSlide {
+  id: string;
+  tag: string;
+  headline: string;
+  subtitle: string;
+  ctaText: string;
+  ctaLink: string;
+  secondaryText?: string;
+  secondaryLink?: string;
+  bgImage: string;
+  badgeColor?: string;
+  order?: number;
+  active?: boolean;
+}
+
 export interface WebsiteNewsArticle {
   id: string;
   title: string;
@@ -855,6 +870,14 @@ export interface WebsiteSettings {
   heroImageUrl: string;
   heroCtaText: string;
   heroSecondaryCta: string;
+  tagline?: string;
+  heroHeadline?: string;
+  heroBackgroundImage?: string;
+  principalWelcome?: string;
+  newsArticles?: WebsiteNewsArticle[];
+
+  // Dynamic Hero Carousel Slides
+  heroSlides?: WebsiteHeroSlide[];
   
   // Admissions Banner
   admissionsOpen: boolean;

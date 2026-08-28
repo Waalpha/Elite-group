@@ -222,6 +222,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         currentUser,
         loading,
+        isLoginModalOpen,
+        setIsLoginModalOpen,
+        loginWithCredentials,
         switchPersona,
         updateUserProfile,
         logout,
