@@ -1,0 +1,139 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow read/write access for the school management system collections
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+    match /schoolSettings/{docId} {
+      allow read, write: if true;
+    }
+    match /academicYears/{yearId} {
+      allow read, write: if true;
+    }
+    match /terms/{termId} {
+      allow read, write: if true;
+    }
+    match /classes/{classId} {
+      allow read, write: if true;
+    }
+    match /streams/{streamId} {
+      allow read, write: if true;
+    }
+    match /subjects/{subjectId} {
+      allow read, write: if true;
+    }
+    match /learningAreas/{areaId} {
+      allow read, write: if true;
+    }
+    match /strands/{strandId} {
+      allow read, write: if true;
+    }
+    match /subStrands/{subStrandId} {
+      allow read, write: if true;
+    }
+    match /students/{studentId} {
+      allow read, write: if true;
+    }
+    match /admissions/{admissionId} {
+      allow read, write: if true;
+    }
+    match /studentHistory/{historyId} {
+      allow read, write: if true;
+    }
+    match /teachers/{teacherId} {
+      allow read, write: if true;
+    }
+    match /staff/{staffId} {
+      allow read, write: if true;
+    }
+    match /parents/{parentId} {
+      allow read, write: if true;
+    }
+    match /attendance/{attendanceId} {
+      allow read, write: if true;
+    }
+    match /assessments/{assessmentId} {
+      allow read, write: if true;
+    }
+    match /assessmentResults/{resultId} {
+      allow read, write: if true;
+    }
+    match /examResults/{resultId} {
+      allow read, write: if true;
+    }
+    match /reportCards/{reportId} {
+      allow read, write: if true;
+    }
+    match /feeStructures/{feeId} {
+      allow read, write: if true;
+    }
+    match /invoices/{invoiceId} {
+      allow read, write: if true;
+    }
+    match /payments/{paymentId} {
+      allow read, write: if true;
+    }
+    match /receipts/{receiptId} {
+      allow read, write: if true;
+    }
+    match /expenses/{expenseId} {
+      allow read, write: if true;
+    }
+    match /timetables/{timetableId} {
+      allow read, write: if true;
+    }
+    match /assignments/{assignmentId} {
+      allow read, write: if true;
+    }
+    match /submissions/{submissionId} {
+      allow read, write: if true;
+    }
+    match /announcements/{announcementId} {
+      allow read, write: if true;
+    }
+    match /notifications/{notifId} {
+      allow read, write: if true;
+    }
+    match /books/{bookId} {
+      allow read, write: if true;
+    }
+    match /libraryBooks/{bookId} {
+      allow read, write: if true;
+    }
+    match /bookLoans/{loanId} {
+      allow read, write: if true;
+    }
+    match /inventory/{itemId} {
+      allow read, write: if true;
+    }
+    match /inventoryItems/{itemId} {
+      allow read, write: if true;
+    }
+    match /inventoryTransactions/{txnId} {
+      allow read, write: if true;
+    }
+    match /suppliers/{supplierId} {
+      allow read, write: if true;
+    }
+    match /vehicles/{vehicleId} {
+      allow read, write: if true;
+    }
+    match /routes/{routeId} {
+      allow read, write: if true;
+    }
+    match /transportRoutes/{routeId} {
+      allow read, write: if true;
+    }
+    match /documents/{docId} {
+      allow read, write: if true;
+    }
+    match /auditLogs/{logId} {
+      allow read, write: if true;
+    }
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
+

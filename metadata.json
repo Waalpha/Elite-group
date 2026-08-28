@@ -1,0 +1,6 @@
+{
+  "name": "Uwezo Elite School - Complete School ERP System",
+  "description": "Comprehensive, modern Cloud Firestore-backed School ERP for Uwezo Elite School managing Playgroup through Grade 9 with CBC/CBE curriculum, admissions, fees, attendance, examinations, report cards, portals, transport, and inventory.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
