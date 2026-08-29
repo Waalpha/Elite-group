@@ -188,7 +188,7 @@ export const Topbar: React.FC<TopbarProps> = ({
               {notifDropdownOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setNotifDropdownOpen(false)} />
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-200/80 z-50 p-3 space-y-2 text-xs">
+                  <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-24px)] bg-white rounded-2xl shadow-xl border border-slate-200/80 z-50 p-3 space-y-2 text-xs">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                       <span className="font-bold text-slate-800">School Notifications</span>
                       <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold">2 New</span>
@@ -240,7 +240,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                   />
                   <div
                     id="persona-dropdown-menu"
-                    className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200/80 z-50 p-2 space-y-1 text-xs"
+                    className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-24px)] bg-white rounded-2xl shadow-2xl border border-slate-200/80 z-50 p-2 space-y-1 text-xs"
                   >
                     <div className="px-3 py-2 border-b border-slate-100">
                       <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
@@ -272,6 +272,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                         onClick={() => {
                           setRoleDropdownOpen(false);
                           logout();
+                          setActiveTab('website_view' as any);
                         }}
                         className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left font-semibold text-xs text-rose-700 hover:bg-rose-50 transition cursor-pointer"
                       >

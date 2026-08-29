@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -25,6 +25,11 @@ import {
   LogOut,
   Globe,
   Sliders,
+  ChevronsUpDown,
+  Compass,
+  KeyRound,
+  Check,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSchoolSettings } from '../../contexts/SettingsContext';
@@ -77,13 +82,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   setIsOpen,
 }) => {
-  const { currentUser, isAdmin, isAccountant, isTeacher, isParent, isStudent, isLibrarian, isStorekeeper, isTransportManager, isRegistrar } = useAuth();
+  const {
+    currentUser,
+    isAdmin,
+    isAccountant,
+    isTeacher,
+    isParent,
+    isStudent,
+    isLibrarian,
+    isStorekeeper,
+    isTransportManager,
+    isRegistrar,
+    switchPersona,
+    logout,
+    setIsLoginModalOpen,
+  } = useAuth();
   const { settings } = useSchoolSettings();
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
-  const toggleSection = (section: string) => {
-    setCollapsedSections((prev) => ({ ...prev, [section]: !prev[section] }));
-  };
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+
+  const personas: { role: UserRole; title: string; desc: string; icon: string }[] = [
+    { role: 'SUPER_ADMIN', title: 'Super Admin', desc: 'Full System & Operations Access', icon: '👑' },
+    { role: 'PRINCIPAL', title: 'Principal / Head Teacher', desc: 'Academic & Admin Oversight', icon: '🎓' },
+    { role: 'ACCOUNTANT', title: 'Accountant (CPA-K)', desc: 'Fees, M-Pesa & Financials', icon: '💰' },
+    { role: 'TEACHER', title: 'Teacher / Facilitator', desc: 'Assigned Classes & Attendance', icon: '📚' },
+    { role: 'REGISTRAR', title: 'Registrar / Admissions', desc: 'Applications & Records', icon: '📝' },
+    { role: 'PARENT', title: 'Parent / Guardian', desc: 'Child Academic & Fee Portal', icon: '👨‍👩‍👧' },
+    { role: 'STUDENT', title: 'Learner (Grade 6)', desc: 'Student Portal & Timetable', icon: '🎒' },
+  ];
 
   const navSections: NavSection[] = [
     {
@@ -159,23 +186,69 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
   ];
 
+  // Auto-expand section containing activeTab
+  useEffect(() => {
+    const activeSection = navSections.find((sec) =>
+      sec.items.some((item) => item.id === activeTab && item.show)
+    );
+    if (activeSection) {
+      setCollapsedSections((prev) => {
+        if (prev[activeSection.title] === true) {
+          return { ...prev, [activeSection.title]: false };
+        }
+        return prev;
+      });
+    }
+  }, [activeTab]);
+
+  const toggleSection = (section: string) => {
+    setCollapsedSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  const handleCollapseAll = () => {
+    const newCollapsed: Record<string, boolean> = {};
+    navSections.forEach((s) => {
+      newCollapsed[s.title] = true;
+    });
+    setCollapsedSections(newCollapsed);
+  };
+
+  const handleExpandAll = () => {
+    setCollapsedSections({});
+  };
+
+  const handleQuickDropdownSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedTab = e.target.value as NavTab;
+    if (selectedTab) {
+      setActiveTab(selectedTab);
+      if (window.innerWidth < 1024) {
+        setIsOpen(false);
+      }
+    }
+  };
+
   return (
     <>
       {/* Mobile Backdrop */}
       {isOpen && (
         <div
           className="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-xs lg:hidden"
-          onClick={() => setIsOpen(false)}
+          onClick={() => {
+            setIsOpen(false);
+            setUserDropdownOpen(false);
+          }}
         />
       )}
 
       <aside
         id="erp-main-sidebar"
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-[#064e3b] text-slate-200 flex flex-col transition-transform duration-300 ease-in-out lg:static lg:inset-auto lg:h-full lg:translate-x-0 shrink-0 select-none border-r border-emerald-900/40 shadow-lg`}
+        className={`fixed inset-y-0 left-0 z-40 w-80 max-w-[85vw] bg-[#064e3b] text-slate-200 flex flex-col transition-transform duration-300 ease-in-out lg:static lg:inset-auto lg:h-full lg:translate-x-0 shrink-0 select-none border-r border-emerald-900/40 shadow-2xl lg:shadow-lg ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
       >
         {/* Brand Header */}
-        <div className="p-4 border-b border-emerald-800/40 bg-emerald-950/30">
-          <div className="flex items-center gap-3">
+        <div className="p-4 border-b border-emerald-800/40 bg-emerald-950/30 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             {settings.logoUrl ? (
               <div className="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-xs border border-emerald-400/20 shrink-0 overflow-hidden">
                 <img
@@ -204,31 +277,116 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </p>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className="p-1.5 rounded-xl bg-emerald-900/80 text-emerald-300 hover:text-white hover:bg-emerald-800 lg:hidden cursor-pointer shrink-0 transition"
+            aria-label="Close sidebar"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* Navigation List */}
-        <nav className="flex-1 px-3 py-3.5 space-y-3.5 overflow-y-auto custom-scrollbar text-xs">
+        {/* Quick Module Jump Dropdown Bar */}
+        <div className="px-3 pt-3 pb-1 border-b border-emerald-800/30 bg-emerald-950/20 space-y-2">
+          <div className="relative">
+            <div className="flex items-center gap-2 px-3 py-2 bg-emerald-900/60 hover:bg-emerald-900/80 border border-emerald-700/50 rounded-xl text-xs text-white shadow-inner transition cursor-pointer">
+              <Compass className="w-4 h-4 text-emerald-300 shrink-0" />
+              <select
+                id="sidebar-quick-module-dropdown"
+                value={activeTab}
+                onChange={handleQuickDropdownSelect}
+                className="w-full bg-transparent text-white font-semibold text-xs focus:outline-hidden cursor-pointer appearance-none pr-5 truncate"
+                aria-label="Quick jump to module dropdown"
+              >
+                {navSections.map((section) => {
+                  const items = section.items.filter((i) => i.show);
+                  if (items.length === 0) return null;
+                  return (
+                    <optgroup key={section.title} label={`── ${section.title} ──`} className="bg-slate-900 text-slate-200">
+                      {items.map((item) => (
+                        <option key={item.id} value={item.id} className="bg-slate-900 text-white py-1">
+                          {item.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
+              </select>
+              <ChevronsUpDown className="w-4 h-4 text-emerald-300/80 absolute right-3 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Quick Collapse / Expand Dropdown Helpers */}
+          <div className="flex items-center justify-between text-[10px] text-emerald-300/70 px-1 font-semibold">
+            <span>Navigation Sections</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleExpandAll}
+                className="hover:text-white transition cursor-pointer"
+              >
+                Expand All
+              </button>
+              <span>•</span>
+              <button
+                type="button"
+                onClick={handleCollapseAll}
+                className="hover:text-white transition cursor-pointer"
+              >
+                Collapse All
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Accordion Sections List */}
+        <nav className="flex-1 px-3 py-2.5 space-y-2 overflow-y-auto custom-scrollbar text-xs">
           {navSections.map((section) => {
             const visibleItems = section.items.filter((item) => item.show);
             if (visibleItems.length === 0) return null;
             const isCollapsed = !!collapsedSections[section.title];
+            const hasActiveItem = visibleItems.some((item) => item.id === activeTab);
 
             return (
-              <div key={section.title} className="space-y-0.5">
+              <div
+                key={section.title}
+                className={`rounded-xl transition-colors ${
+                  hasActiveItem && isCollapsed
+                    ? 'bg-emerald-900/30 border border-emerald-600/30'
+                    : ''
+                }`}
+              >
+                {/* Section Dropdown Toggle Header */}
                 <button
+                  type="button"
                   onClick={() => toggleSection(section.title)}
-                  className="w-full flex items-center justify-between px-2.5 py-1 text-[10px] font-bold tracking-wider text-emerald-300/60 hover:text-emerald-200 uppercase transition cursor-pointer"
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[11px] font-bold tracking-wider uppercase transition cursor-pointer min-h-[34px] ${
+                    hasActiveItem
+                      ? 'text-emerald-200 bg-emerald-900/40'
+                      : 'text-emerald-300/70 hover:text-emerald-100 hover:bg-emerald-900/30'
+                  }`}
+                  aria-expanded={!isCollapsed}
                 >
-                  <span>{section.title}</span>
-                  {isCollapsed ? (
-                    <ChevronRight className="w-3 h-3 text-emerald-400/50" />
-                  ) : (
-                    <ChevronDown className="w-3 h-3 text-emerald-400/50" />
-                  )}
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="truncate">{section.title}</span>
+                    <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-950/60 text-emerald-400 font-semibold lowercase">
+                      {visibleItems.length}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1 text-emerald-400/70">
+                    {isCollapsed ? (
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5 text-emerald-300" />
+                    )}
+                  </div>
                 </button>
 
+                {/* Dropdown Items List */}
                 {!isCollapsed && (
-                  <div className="space-y-0.5 mt-0.5">
+                  <div className="space-y-1 mt-1 pl-1 pr-0.5 animate-in fade-in duration-150">
                     {visibleItems.map((item) => {
                       const Icon = item.icon;
                       const isActive = activeTab === item.id;
@@ -240,10 +398,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             setActiveTab(item.id);
                             if (window.innerWidth < 1024) setIsOpen(false);
                           }}
-                          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left font-medium transition-all duration-150 group cursor-pointer ${
+                          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left font-medium transition-all duration-150 group cursor-pointer min-h-[40px] ${
                             isActive
-                              ? 'bg-white text-emerald-950 font-bold shadow-xs'
-                              : 'text-emerald-100/90 hover:bg-emerald-800/40 hover:text-white'
+                              ? 'bg-white text-emerald-950 font-bold shadow-md ring-1 ring-white/50'
+                              : 'text-emerald-100/90 hover:bg-emerald-800/50 hover:text-white'
                           }`}
                         >
                           <div className="flex items-center gap-2.5 truncate">
@@ -252,7 +410,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 isActive ? 'text-emerald-700' : 'text-emerald-300/70 group-hover:text-emerald-200'
                               }`}
                             />
-                            <span className="truncate">{item.label}</span>
+                            <span className="truncate text-xs">{item.label}</span>
                           </div>
                           {item.badge && (
                             <span
@@ -275,23 +433,111 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
         </nav>
 
-        {/* Dynamic Logged-in User Card in Sidebar Bottom */}
-        <div className="p-3 border-t border-emerald-800/40 bg-emerald-950/40">
-          <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-emerald-900/40 border border-emerald-800/40">
+        {/* Dynamic Logged-in User Dropdown Card in Sidebar Bottom */}
+        <div className="p-3 border-t border-emerald-800/40 bg-emerald-950/40 relative">
+          {/* User Popover Dropdown Menu */}
+          {userDropdownOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setUserDropdownOpen(false)}
+              />
+              <div className="absolute bottom-full left-3 right-3 mb-2 bg-slate-900 border border-emerald-700/60 rounded-2xl shadow-2xl z-50 p-2 space-y-1 text-xs text-white backdrop-blur-xl animate-in slide-in-from-bottom-2 duration-150">
+                <div className="px-3 py-2 border-b border-slate-800">
+                  <p className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">
+                    Logged In User
+                  </p>
+                  <p className="font-bold text-white text-xs truncate">
+                    {currentUser?.displayName || 'Dr. Josephat Mwangi'}
+                  </p>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    @{currentUser?.username || 'admin'} • {currentUser?.email || 'school@uwezo.sc.ke'}
+                  </p>
+                </div>
+
+                <div className="p-1 space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      setIsLoginModalOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left font-bold text-xs text-emerald-300 bg-emerald-950/60 hover:bg-emerald-900/60 transition cursor-pointer border border-emerald-800/50"
+                  >
+                    <KeyRound className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Sign In with Password</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      logout();
+                      setActiveTab('website_view');
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left font-semibold text-xs text-rose-400 hover:bg-rose-950/50 transition cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4 text-rose-400 shrink-0" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+
+                <div className="px-3 pt-2 pb-1 border-t border-slate-800">
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    Switch User Role
+                  </p>
+                </div>
+
+                <div className="max-h-40 overflow-y-auto space-y-0.5 custom-scrollbar">
+                  {personas.map((p) => {
+                    const isCurrent = currentUser?.role === p.role;
+                    return (
+                      <button
+                        key={p.role}
+                        onClick={async () => {
+                          await switchPersona(p.role);
+                          setUserDropdownOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left transition cursor-pointer ${
+                          isCurrent
+                            ? 'bg-emerald-800 text-white font-bold'
+                            : 'text-slate-300 hover:bg-slate-800'
+                        }`}
+                      >
+                        <span>{p.icon}</span>
+                        <span className="text-xs truncate flex-1">{p.title}</span>
+                        {isCurrent && <Check className="w-3.5 h-3.5 text-emerald-300" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* User Card Trigger Button */}
+          <button
+            type="button"
+            onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-emerald-900/50 hover:bg-emerald-900/80 border border-emerald-800/60 transition cursor-pointer text-left group min-h-[44px]"
+            title="Click to open user profile & role switcher dropdown"
+          >
             <div className="w-8 h-8 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-bold text-xs uppercase shrink-0 shadow-inner">
               {currentUser?.displayName ? currentUser.displayName.slice(0, 2) : 'UE'}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-white truncate leading-tight">
+              <p className="text-xs font-bold text-white truncate leading-tight group-hover:text-emerald-200">
                 {currentUser?.displayName || 'Dr. Josephat Mwangi'}
               </p>
-              <span className="inline-block text-[10px] text-emerald-300/90 font-medium">
+              <span className="inline-block text-[10px] text-emerald-300/90 font-medium truncate">
                 {currentUser?.role ? currentUser.role.replace('_', ' ') : 'SUPER ADMIN'}
               </span>
             </div>
-          </div>
+            <ChevronsUpDown className="w-4 h-4 text-emerald-400/80 group-hover:text-emerald-200 shrink-0" />
+          </button>
         </div>
       </aside>
     </>
   );
 };
+

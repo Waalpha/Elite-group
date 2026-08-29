@@ -355,6 +355,11 @@ export const AttendanceModule: React.FC = () => {
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
         students={students}
+        onAttendanceRecorded={(rec) => {
+          if (rec.studentId && rec.status) {
+            handleStatusChange(rec.studentId, rec.status);
+          }
+        }}
       />
     </div>
   );

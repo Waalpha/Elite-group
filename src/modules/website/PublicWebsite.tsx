@@ -28,21 +28,74 @@ import {
   Flame,
   ArrowUpRight,
   Sliders,
+  Menu,
+  X,
 } from 'lucide-react';
 import { useSchoolSettings } from '../../contexts/SettingsContext';
 import { addAdmissionApplication } from '../../services/firebaseService';
-import { GradeLevel } from '../../types';
+import { GradeLevel, WebsiteHeroSlide } from '../../types';
 
 interface PublicWebsiteProps {
   onNavigateToPortal?: (tab?: string) => void;
   onOpenCMS?: () => void;
 }
 
+const DEFAULT_HERO_SLIDES: WebsiteHeroSlide[] = [
+  {
+    id: 'slide-1',
+    tag: 'Premier CBC & Junior Secondary Excellence',
+    headline: 'Nurturing Future Leaders with Excellence, Character & Technology',
+    subtitle:
+      'A world-class co-educational day and boarding institution in Kenya empowering learners through modern CBC, STEM innovation, and values.',
+    ctaText: 'Enroll / Apply for Admission',
+    ctaLink: '#admissions',
+    secondaryText: 'Explore CBC Curriculum',
+    secondaryLink: '#academics',
+    bgImage:
+      'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=1600&auto=format&fit=crop&q=80',
+    badgeColor: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300',
+    active: true,
+    order: 1,
+  },
+  {
+    id: 'slide-2',
+    tag: 'Junior Secondary (JSS) & STEM Hub',
+    headline: 'State-of-the-Art Science Labs, Coding & Pre-Technical Workshops',
+    subtitle:
+      'Our Grade 7, 8 & 9 Junior Secondary learners gain hands-on technical skills, robotics, digital literacy, and holistic scientific inquiry with certified TSC master faculty.',
+    ctaText: 'Discover JSS Programs',
+    ctaLink: '#academics',
+    secondaryText: 'View Facilities',
+    secondaryLink: '#facilities',
+    bgImage:
+      'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1600&auto=format&fit=crop&q=80',
+    badgeColor: 'bg-blue-500/20 border-blue-500/40 text-blue-300',
+    active: true,
+    order: 2,
+  },
+  {
+    id: 'slide-3',
+    tag: 'Holistic Talents & Character Development',
+    headline: 'Championing Athletics, Music, Creative Arts & Global Leadership',
+    subtitle:
+      'Beyond top academic performance, our learners excel in swimming, performing arts, drama, chess, debate, and values-rooted leadership development.',
+    ctaText: 'Explore Co-Curriculars',
+    ctaLink: '#facilities',
+    secondaryText: 'Admissions Inquiries',
+    secondaryLink: '#admissions',
+    bgImage:
+      'https://images.unsplash.com/photo-1577896851231-70ef18881754?w=1600&auto=format&fit=crop&q=80',
+    badgeColor: 'bg-amber-500/20 border-amber-500/40 text-amber-300',
+    active: true,
+    order: 3,
+  },
+];
+
 export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
   onNavigateToPortal,
 }) => {
   const { settings, websiteSettings } = useSchoolSettings();
-  const [activeSection, setActiveSection] = useState('home');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [inquirySent, setInquirySent] = useState(false);
   const [inquiryForm, setInquiryForm] = useState({
@@ -55,66 +108,37 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
     notes: '',
   });
 
-  const heroSlides = [
-    {
-      id: 'slide-1',
-      tag: websiteSettings?.tagline || 'Premier CBC & Junior Secondary Excellence',
-      headline: websiteSettings?.heroHeadline || 'Nurturing Future Leaders with Excellence, Character & Technology',
-      subtitle: websiteSettings?.heroSubtitle ||
-        'A world-class co-educational day and boarding institution in Kenya empowering learners through modern CBC, STEM innovation, and values.',
-      ctaText: websiteSettings?.heroCtaText || 'Enroll / Apply for Admission',
-      ctaLink: '#admissions',
-      secondaryText: 'Explore CBC Curriculum',
-      secondaryLink: '#academics',
-      bgImage:
-        websiteSettings?.heroBackgroundImage ||
-        'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=1600&auto=format&fit=crop&q=80',
-      badgeColor: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300',
-    },
-    {
-      id: 'slide-2',
-      tag: 'Junior Secondary (JSS) & STEM Hub',
-      headline: 'State-of-the-Art Science Labs, Coding & Pre-Technical Workshops',
-      subtitle:
-        'Our Grade 7, 8 & 9 Junior Secondary learners gain hands-on technical skills, robotics, digital literacy, and holistic scientific inquiry with certified TSC master faculty.',
-      ctaText: 'Discover JSS Programs',
-      ctaLink: '#academics',
-      secondaryText: 'View Facilities',
-      secondaryLink: '#facilities',
-      bgImage:
-        'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1600&auto=format&fit=crop&q=80',
-      badgeColor: 'bg-blue-500/20 border-blue-500/40 text-blue-300',
-    },
-    {
-      id: 'slide-3',
-      tag: 'Holistic Talents & Character Development',
-      headline: 'Championing Athletics, Music, Creative Arts & Global Leadership',
-      subtitle:
-        'Beyond top academic performance, our learners excel in swimming, performing arts, drama, chess, debate, and values-rooted leadership development.',
-      ctaText: 'Explore Co-Curriculars',
-      ctaLink: '#facilities',
-      secondaryText: 'Admissions Inquiries',
-      secondaryLink: '#admissions',
-      bgImage:
-        'https://images.unsplash.com/photo-1577896851231-70ef18881754?w=1600&auto=format&fit=crop&q=80',
-      badgeColor: 'bg-amber-500/20 border-amber-500/40 text-amber-300',
-    },
-  ];
+  // Resolve slides from CMS or defaults
+  const activeSlides: WebsiteHeroSlide[] = (() => {
+    if (websiteSettings?.heroSlides && websiteSettings.heroSlides.length > 0) {
+      const filtered = websiteSettings.heroSlides.filter((s) => s.active !== false);
+      if (filtered.length > 0) return filtered;
+    }
+    return DEFAULT_HERO_SLIDES;
+  })();
+
+  // Keep slide index in bounds when slides change
+  useEffect(() => {
+    if (currentSlideIndex >= activeSlides.length) {
+      setCurrentSlideIndex(0);
+    }
+  }, [activeSlides.length, currentSlideIndex]);
 
   // Auto slide interval
   useEffect(() => {
+    if (activeSlides.length <= 1) return;
     const timer = setInterval(() => {
-      setCurrentSlideIndex((prev) => (prev + 1) % heroSlides.length);
+      setCurrentSlideIndex((prev) => (prev + 1) % activeSlides.length);
     }, 7000);
     return () => clearInterval(timer);
-  }, [heroSlides.length]);
+  }, [activeSlides.length]);
 
   const handleNextSlide = () => {
-    setCurrentSlideIndex((prev) => (prev + 1) % heroSlides.length);
+    setCurrentSlideIndex((prev) => (prev + 1) % activeSlides.length);
   };
 
   const handlePrevSlide = () => {
-    setCurrentSlideIndex((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
+    setCurrentSlideIndex((prev) => (prev - 1 + activeSlides.length) % activeSlides.length);
   };
 
   const handleApplySubmit = async (e: React.FormEvent) => {
@@ -149,7 +173,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
     }
   };
 
-  const currentSlide = heroSlides[currentSlideIndex];
+  const currentSlide = activeSlides[currentSlideIndex] || activeSlides[0] || DEFAULT_HERO_SLIDES[0];
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-emerald-500 selection:text-white pb-20">
@@ -176,7 +200,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
           {/* Logo & School Name */}
           <div className="flex items-center gap-3">
             {settings?.logoUrl ? (
-              <div className="w-12 h-12 rounded-2xl bg-white p-1 flex items-center justify-center shadow-lg border border-emerald-500/40 shrink-0 overflow-hidden">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-white p-1 flex items-center justify-center shadow-lg border border-emerald-500/40 shrink-0 overflow-hidden">
                 <img
                   src={settings.logoUrl}
                   alt={settings.schoolName}
@@ -185,7 +209,7 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
                 />
               </div>
             ) : (
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-800 flex items-center justify-center text-white font-bold text-lg shadow-lg border border-emerald-500/40 shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-800 flex items-center justify-center text-white font-bold text-base sm:text-lg shadow-lg border border-emerald-500/40 shrink-0">
                 {(settings?.schoolName || 'UES')
                   .split(' ')
                   .map((w) => w[0])
@@ -195,17 +219,17 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
               </div>
             )}
             <div>
-              <h1 className="text-base sm:text-lg font-black font-serif text-white tracking-tight leading-tight">
+              <h1 className="text-sm sm:text-base md:text-lg font-black font-serif text-white tracking-tight leading-tight line-clamp-1">
                 {settings?.schoolName || 'UWEZO ELITE SCHOOL'}
               </h1>
-              <p className="text-[11px] text-emerald-400 font-semibold tracking-wide">
+              <p className="text-[10px] sm:text-[11px] text-emerald-400 font-semibold tracking-wide line-clamp-1">
                 {settings?.motto || 'Excellence in Character, Innovation and Leadership'}
               </p>
             </div>
           </div>
 
-          {/* Nav Links */}
-          <nav className="hidden md:flex items-center gap-6 text-xs font-bold text-slate-300">
+          {/* Nav Links (Desktop & Tablet Landscape) */}
+          <nav className="hidden lg:flex items-center gap-6 text-xs font-bold text-slate-300">
             <a href="#home" className="hover:text-emerald-400 transition">Home</a>
             <a href="#about" className="hover:text-emerald-400 transition">About Us</a>
             <a href="#academics" className="hover:text-emerald-400 transition">Academics & CBC</a>
@@ -216,93 +240,139 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
             <a href="#contact" className="hover:text-emerald-400 transition">Contact</a>
           </nav>
 
-          {/* Actions & ERP Switcher */}
+          {/* Actions & Mobile Toggle */}
           <div className="flex items-center gap-2">
             {onNavigateToPortal && (
               <button
                 onClick={() => onNavigateToPortal('dashboard')}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 cursor-pointer"
+                className="px-3.5 py-2 sm:px-4 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 cursor-pointer min-h-[40px]"
               >
                 <ShieldCheck className="w-4 h-4" />
-                <span>ERP Portal</span>
+                <span className="hidden sm:inline">ERP Portal</span>
+                <span className="sm:hidden">Login</span>
               </button>
             )}
+
+            {/* Mobile / Tablet Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white flex items-center justify-center cursor-pointer min-h-[40px] min-w-[40px]"
+              aria-label="Toggle navigation menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile & Tablet Dropdown Navigation Drawer */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden bg-slate-950/95 border-b border-slate-800 px-4 py-4 space-y-2 backdrop-blur-xl animate-in slide-in-from-top-2 duration-200">
+            {[
+              { label: 'Home', href: '#home' },
+              { label: 'About Us', href: '#about' },
+              { label: 'Academics & CBC', href: '#academics' },
+              { label: 'Facilities', href: '#facilities' },
+              { label: 'News & Bulletins', href: '#news' },
+              { label: 'Testimonials', href: '#testimonials' },
+              { label: 'Admissions & Inquiries', href: '#admissions' },
+              { label: 'Contact & Location', href: '#contact' },
+            ].map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-4 py-2.5 rounded-xl text-sm font-bold text-slate-200 hover:bg-emerald-900/30 hover:text-emerald-400 transition"
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
+        )}
       </header>
 
       {/* Hero Section with Multi-Slide Carousel */}
       <section
         id="home"
-        className="relative overflow-hidden pt-20 pb-28 sm:pt-28 sm:pb-36 bg-cover bg-center border-b border-slate-800 transition-all duration-700"
+        className="relative overflow-hidden pt-16 pb-24 sm:pt-24 sm:pb-32 lg:pt-28 lg:pb-36 bg-cover bg-center border-b border-slate-800 transition-all duration-700"
         style={{
           backgroundImage: `linear-gradient(to bottom, rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.95)), url(${currentSlide.bgImage})`,
         }}
       >
-        {/* Slide Carousel Arrow Controls */}
-        <button
-          onClick={handlePrevSlide}
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-slate-950/60 hover:bg-slate-900/90 border border-slate-700/80 text-white flex items-center justify-center backdrop-blur-md transition shadow-lg cursor-pointer"
-          title="Previous slide"
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
+        {/* Slide Carousel Arrow Controls (Visible when more than 1 slide) */}
+        {activeSlides.length > 1 && (
+          <>
+            <button
+              onClick={handlePrevSlide}
+              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-950/70 hover:bg-slate-900/90 border border-slate-700/80 text-white flex items-center justify-center backdrop-blur-md transition shadow-lg cursor-pointer min-h-[44px] min-w-[44px]"
+              title="Previous slide"
+              aria-label="Previous slide"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
 
-        <button
-          onClick={handleNextSlide}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-slate-950/60 hover:bg-slate-900/90 border border-slate-700/80 text-white flex items-center justify-center backdrop-blur-md transition shadow-lg cursor-pointer"
-          title="Next slide"
-        >
-          <ChevronRight className="w-6 h-6" />
-        </button>
+            <button
+              onClick={handleNextSlide}
+              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-950/70 hover:bg-slate-900/90 border border-slate-700/80 text-white flex items-center justify-center backdrop-blur-md transition shadow-lg cursor-pointer min-h-[44px] min-w-[44px]"
+              title="Next slide"
+              aria-label="Next slide"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          </>
+        )}
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6 relative z-10">
-          <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wider backdrop-blur-xs transition-all ${currentSlide.badgeColor}`}>
+          <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wider backdrop-blur-xs transition-all ${currentSlide.badgeColor || 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'}`}>
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
             <span>{currentSlide.tag}</span>
           </div>
 
-          <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black font-serif text-white tracking-tight max-w-4xl mx-auto leading-tight transition-all duration-500">
+          <h2 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black font-serif text-white tracking-tight max-w-4xl mx-auto leading-tight transition-all duration-500 px-2">
             {currentSlide.headline}
           </h2>
 
-          <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto font-medium leading-relaxed transition-all duration-500">
+          <p className="text-sm sm:text-base md:text-lg text-slate-300 max-w-2xl mx-auto font-medium leading-relaxed transition-all duration-500 px-2">
             {currentSlide.subtitle}
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4 px-4">
             <a
               href={currentSlide.ctaLink}
-              className="px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-xl shadow-emerald-900/50 transition flex items-center gap-2 cursor-pointer"
+              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-xl shadow-emerald-900/50 transition flex items-center justify-center gap-2 cursor-pointer min-h-[44px]"
             >
               <span>{currentSlide.ctaText}</span>
               <ArrowRight className="w-4 h-4" />
             </a>
 
-            <a
-              href={currentSlide.secondaryLink}
-              className="px-6 py-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 font-bold text-sm border border-slate-700 transition flex items-center gap-2 backdrop-blur-xs cursor-pointer"
-            >
-              <BookOpen className="w-4 h-4 text-emerald-400" />
-              <span>{currentSlide.secondaryText}</span>
-            </a>
+            {currentSlide.secondaryText && (
+              <a
+                href={currentSlide.secondaryLink}
+                className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 font-bold text-sm border border-slate-700 transition flex items-center justify-center gap-2 backdrop-blur-xs cursor-pointer min-h-[44px]"
+              >
+                <BookOpen className="w-4 h-4 text-emerald-400" />
+                <span>{currentSlide.secondaryText}</span>
+              </a>
+            )}
           </div>
 
           {/* Slide Indicator Dots */}
-          <div className="flex items-center justify-center gap-2.5 pt-4">
-            {heroSlides.map((s, idx) => (
-              <button
-                key={s.id}
-                onClick={() => setCurrentSlideIndex(idx)}
-                className={`h-2.5 rounded-full transition-all cursor-pointer ${
-                  currentSlideIndex === idx
-                    ? 'w-8 bg-emerald-500'
-                    : 'w-2.5 bg-slate-600 hover:bg-slate-500'
-                }`}
-                title={`Go to slide ${idx + 1}`}
-              />
-            ))}
-          </div>
+          {activeSlides.length > 1 && (
+            <div className="flex items-center justify-center gap-2.5 pt-4">
+              {activeSlides.map((s, idx) => (
+                <button
+                  key={s.id || idx}
+                  onClick={() => setCurrentSlideIndex(idx)}
+                  className={`h-2.5 rounded-full transition-all cursor-pointer min-h-[12px] min-w-[12px] ${
+                    currentSlideIndex === idx
+                      ? 'w-8 bg-emerald-500'
+                      : 'w-2.5 bg-slate-600 hover:bg-slate-500'
+                  }`}
+                  title={`Go to slide ${idx + 1}`}
+                  aria-label={`Go to slide ${idx + 1}`}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Stats Badges */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto pt-8">
@@ -319,8 +389,8 @@ export const PublicWebsite: React.FC<PublicWebsiteProps> = ({
               <p className="text-xs text-slate-400 font-semibold uppercase mt-1">JSS Transition Rate</p>
             </div>
             <div className="bg-slate-950/80 backdrop-blur-md p-4 rounded-2xl border border-slate-800 text-center">
-              <p className="text-2xl sm:text-3xl font-black text-purple-400">24+</p>
-              <p className="text-xs text-slate-400 font-semibold uppercase mt-1">Co-Curricular Clubs</p>
+              <p className="text-2xl sm:text-3xl font-black text-blue-400">25+</p>
+              <p className="text-xs text-slate-400 font-semibold uppercase mt-1">Modern STEM Labs & Hubs</p>
             </div>
           </div>
         </div>
