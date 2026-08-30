@@ -151,12 +151,46 @@ export const SEED_USERS: UserProfile[] = [
   },
 ];
 
+export async function ensureSeedUsersExist(): Promise<void> {
+  try {
+    const usersCol = collection(db, 'users');
+    const existingSnap = await getDocs(usersCol);
+    const existingIds = new Set(existingSnap.docs.map((d) => d.id));
+    const existingUsernames = new Set(
+      existingSnap.docs
+        .map((d) => (d.data() as UserProfile).username?.toLowerCase())
+        .filter(Boolean)
+    );
+
+    const batch = writeBatch(db);
+    let needsCommit = false;
+
+    for (const u of SEED_USERS) {
+      if (!existingIds.has(u.id) && (!u.username || !existingUsernames.has(u.username.toLowerCase()))) {
+        const uRef = doc(db, 'users', u.id);
+        batch.set(uRef, u);
+        needsCommit = true;
+      }
+    }
+
+    if (needsCommit) {
+      await batch.commit();
+      console.log('Seeded missing default user accounts into Firestore.');
+    }
+  } catch (err) {
+    console.warn('Could not auto-seed users:', err);
+  }
+}
+
 export async function checkAndSeedInitialData(force = false): Promise<boolean> {
   try {
+    // Always ensure user accounts exist
+    await ensureSeedUsersExist();
+
     const studentsCol = collection(db, 'students');
     const existingSnap = await getDocs(query(studentsCol, limit(1)));
     if (!existingSnap.empty && !force) {
-      console.log('Database already has data. Skipping automatic seed.');
+      console.log('Database already has data. Skipping automatic full seed.');
       return false;
     }
 

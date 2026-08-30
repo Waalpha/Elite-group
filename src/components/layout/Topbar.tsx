@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Menu,
   Search,
@@ -16,12 +16,15 @@ import {
   Shield,
   KeyRound,
   LogOut,
+  Command,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { UserRole } from '../../types';
+import { UserRole, Student, Teacher, FeePayment } from '../../types';
 import { checkAndSeedInitialData } from '../../services/seedService';
+import { firestoreService } from '../../services/firebaseService';
 import { NavTab } from './Sidebar';
 import { LoginModal } from '../auth/LoginModal';
+import { SearchCommandModal } from '../modals/SearchCommandModal';
 
 interface TopbarProps {
   onToggleSidebar: () => void;
@@ -38,7 +41,35 @@ export const Topbar: React.FC<TopbarProps> = ({
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [seeding, setSeeding] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  
+  // Real-time collections for global search
+  const [students, setStudents] = useState<Student[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [payments, setPayments] = useState<FeePayment[]>([]);
+
+  useEffect(() => {
+    const unsubStudents = firestoreService.subscribeCollection<Student>('students', setStudents);
+    const unsubTeachers = firestoreService.subscribeCollection<Teacher>('teachers', setTeachers);
+    const unsubPayments = firestoreService.subscribeCollection<FeePayment>('payments', setPayments);
+    return () => {
+      unsubStudents();
+      unsubTeachers();
+      unsubPayments();
+    };
+  }, []);
+
+  // Global Ctrl + K / Cmd + K listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const personas: { role: UserRole; title: string; desc: string; icon: string }[] = [
     { role: 'SUPER_ADMIN', title: 'Super Admin', desc: 'Full System & Operations Access', icon: '👑' },
@@ -104,8 +135,8 @@ export const Topbar: React.FC<TopbarProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xs border-b border-slate-200/70 shadow-xs px-4 py-2.5 sm:px-6">
-        <div className="flex items-center justify-between gap-4">
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xs border-b border-slate-200/70 shadow-xs px-4 py-2.5 sm:px-6 h-16 flex items-center">
+        <div className="flex items-center justify-between gap-4 w-full">
           {/* Left: Mobile Menu Toggle & Breadcrumbs */}
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -133,23 +164,36 @@ export const Topbar: React.FC<TopbarProps> = ({
             </div>
           </div>
 
-          {/* Center: Global Search Bar */}
+          {/* Center: Global Search Trigger Bar */}
           <div className="flex-1 max-w-md mx-2 hidden md:block">
-            <div className="relative w-full">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                id="global-search-input"
-                type="text"
-                placeholder="Search learners, admission no, receipt..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9.5 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200/80 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all text-slate-800 placeholder-slate-400"
-              />
-            </div>
+            <button
+              type="button"
+              id="global-search-input"
+              onClick={() => setIsSearchOpen(true)}
+              className="w-full flex items-center justify-between pl-3.5 pr-3 py-1.5 text-xs bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 rounded-xl transition-all text-slate-400 cursor-pointer text-left group"
+            >
+              <div className="flex items-center gap-2.5">
+                <Search className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition-colors" />
+                <span className="text-slate-500 font-medium">Search learners, admission no, teachers, fees...</span>
+              </div>
+              <div className="flex items-center gap-1 text-[10px] font-mono font-semibold text-slate-400 bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-2xs">
+                <span>⌘</span>
+                <span>K</span>
+              </div>
+            </button>
           </div>
 
           {/* Right: Notifications, Reset Demo Data, and User Profile Dropdown */}
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            {/* Mobile Search Icon */}
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition md:hidden border border-slate-200/70"
+              title="Search"
+            >
+              <Search className="w-4 h-4" />
+            </button>
+
             {/* Login with Username / Password Button */}
             <button
               id="topbar-login-modal-btn"
@@ -259,6 +303,18 @@ export const Topbar: React.FC<TopbarProps> = ({
                         type="button"
                         onClick={() => {
                           setRoleDropdownOpen(false);
+                          setActiveTab('users');
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left font-bold text-xs text-slate-800 bg-slate-50 hover:bg-slate-100 transition cursor-pointer border border-slate-200/80"
+                      >
+                        <Shield className="w-4 h-4 text-indigo-600 shrink-0" />
+                        <span>Manage User Logins & Roles</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRoleDropdownOpen(false);
                           setIsLoginModalOpen(true);
                         }}
                         className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left font-bold text-xs text-emerald-800 bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer border border-emerald-200/80"
@@ -325,7 +381,18 @@ export const Topbar: React.FC<TopbarProps> = ({
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
       />
+
+      {/* Global Search Command Modal */}
+      <SearchCommandModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        students={students}
+        teachers={teachers}
+        payments={payments}
+        onNavigate={setActiveTab}
+      />
     </>
   );
 };
+
 

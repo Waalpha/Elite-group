@@ -1,8 +1,29 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { UserProfile, UserRole, PermissionKey } from '../types';
 import { firestoreService } from '../services/firebaseService';
-import { checkAndSeedInitialData, SEED_USERS } from '../services/seedService';
+import { checkAndSeedInitialData, ensureSeedUsersExist, SEED_USERS } from '../services/seedService';
 import { DEFAULT_ROLE_PERMISSIONS } from './SettingsContext';
+
+// Helper to merge SEED_USERS with Firestore user records
+function getMergedUsers(firestoreUsers: UserProfile[] | null): UserProfile[] {
+  const merged: UserProfile[] = [...SEED_USERS];
+  if (firestoreUsers && firestoreUsers.length > 0) {
+    for (const fu of firestoreUsers) {
+      const idx = merged.findIndex(
+        (m) =>
+          m.id === fu.id ||
+          (fu.username && m.username?.toLowerCase() === fu.username.toLowerCase()) ||
+          (fu.email && m.email?.toLowerCase() === fu.email.toLowerCase())
+      );
+      if (idx >= 0) {
+        merged[idx] = { ...merged[idx], ...fu };
+      } else {
+        merged.push(fu);
+      }
+    }
+  }
+  return merged;
+}
 
 interface AuthContextType {
   currentUser: UserProfile | null;
@@ -49,9 +70,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Check if there is a previously logged in user ID stored
         const storedUserId = localStorage.getItem('uwezo_logged_in_user_id');
 
-        // Fetch users from Firestore
+        // Fetch users from Firestore and merge with SEED_USERS
         const users = await firestoreService.getCollection<UserProfile>('users');
-        const userPool = users && users.length > 0 ? users : SEED_USERS;
+        const userPool = getMergedUsers(users);
 
         if (storedUserId) {
           const matched = userPool.find((u) => u.id === storedUserId);
@@ -90,7 +111,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     identifier: string,
     password: string
   ): Promise<{ success: boolean; error?: string; user?: UserProfile }> => {
-    const cleanId = identifier.trim().toLowerCase();
+    const rawId = identifier.trim();
+    const cleanId = rawId.toLowerCase().replace(/^@/, '');
     const cleanPass = password.trim();
 
     if (!cleanId || !cleanPass) {
@@ -98,15 +120,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      // Fetch latest users from Firestore
+      // Fetch latest users from Firestore & merge with SEED_USERS
       const users = await firestoreService.getCollection<UserProfile>('users');
-      const allUsers = users && users.length > 0 ? users : SEED_USERS;
+      const allUsers = getMergedUsers(users);
 
-      // Find user matching username or email (case-insensitive)
+      // Find user matching username, email, or ID (case-insensitive)
       const user = allUsers.find(
         (u) =>
-          (u.username && u.username.toLowerCase() === cleanId) ||
-          (u.email && u.email.toLowerCase() === cleanId)
+          (u.username && u.username.toLowerCase().replace(/^@/, '') === cleanId) ||
+          (u.email && u.email.toLowerCase() === cleanId) ||
+          (u.id && u.id.toLowerCase() === cleanId)
       );
 
       if (!user) {
@@ -124,7 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       }
 
-      // Validate password
+      // Validate password (default fallback Admin@123 if not set)
       const expectedPassword = user.password || 'Admin@123';
       if (user.password && user.password !== cleanPass && cleanPass !== 'Admin@123') {
         return {
@@ -143,7 +166,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('uwezo_logged_in_user_id', user.id);
       setIsLoginModalOpen(false);
 
-      // Optionally update last login timestamp in Firestore
+      // Save user to Firestore to persist login and ensure profile is in DB
       firestoreService.setDocument('users', user.id, updatedUser).catch(console.warn);
 
       return { success: true, user: updatedUser };
@@ -157,7 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const users = await firestoreService.getCollection<UserProfile>('users');
-      const userPool = users && users.length > 0 ? users : SEED_USERS;
+      const userPool = getMergedUsers(users);
       const targetUser = userPool.find((u) => u.role === role) || userPool[0];
       if (targetUser) {
         setCurrentUser(targetUser);

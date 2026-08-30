@@ -32,6 +32,8 @@ import { PublicWebsite } from './modules/website/PublicWebsite';
 import { WebsiteCMSModule } from './modules/settings/WebsiteCMSModule';
 import { SettingsModule } from './modules/settings/SettingsModule';
 import { AuditLogsModule } from './modules/settings/AuditLogsModule';
+import { UserLoginsModule } from './modules/users/UserLoginsModule';
+import { LoginPage } from './modules/auth/LoginPage';
 
 import { checkAndSeedInitialData } from './services/seedService';
 
@@ -179,6 +181,8 @@ const MainLayout: React.FC = () => {
             onPreviewWebsite={() => setActiveTab('website_view')}
           />
         );
+      case 'users':
+        return <UserLoginsModule />;
       case 'settings':
         return <SettingsModule />;
       case 'audit_logs':
@@ -187,6 +191,16 @@ const MainLayout: React.FC = () => {
         return <DashboardModule onNavigate={setActiveTab} />;
     }
   };
+
+  // If user is logged out and not viewing website, show LoginPage
+  if (!currentUser && activeTab !== 'website_view') {
+    return (
+      <LoginPage
+        onLoginSuccess={() => setActiveTab('dashboard')}
+        onViewWebsite={() => setActiveTab('website_view')}
+      />
+    );
+  }
 
   // If viewing the public website, provide full screen view
   if (activeTab === 'website_view') {
